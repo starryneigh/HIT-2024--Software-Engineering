@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+	<meta charset="UTF-8">
+	<title>学生列表</title>
+	<link rel="stylesheet" type="text/css" th:href="@{/easyui/themes/default/easyui.css}">
+	<link rel="stylesheet" type="text/css" th:href="@{/easyui/themes/icon.css}">
+	<link rel="stylesheet" type="text/css" th:href="@{/easyui/css/demo.css}">
+	<script type="text/javascript" th:src="@{/easyui/jquery.min.js}"></script>
+	<script type="text/javascript" th:src="@{/easyui/jquery.easyui.min.js}"></script>
+	<script type="text/javascript" th:src="@{/easyui/js/validateExtends.js}"></script>
+	<script type="text/javascript" th:inline="javascript">
+		/*<![CDATA[*/
+		function formatDateTime(dateTimeStr) {
+			var date = new Date(dateTimeStr);
+			var year = date.getFullYear();
+			var month = ('0' + (date.getMonth() + 1)).slice(-2); // Months are zero-based
+			var day = ('0' + date.getDate()).slice(-2);
+			var hours = ('0' + date.getHours()).slice(-2);
+			var minutes = ('0' + date.getMinutes()).slice(-2);
+			var seconds = ('0' + date.getSeconds()).slice(-2);
+			return year + '-' + month + '-' + day + ' ' + hours + ':' + minutes + ':' + seconds;
+		}
+
+		$(function () {
+			var usertype = [[${session.usertype}]];
+
+			// 根据用户类型隐藏或显示按钮
+			if (usertype === 'student') {
+				$("#add").hide();
+				$("#edit").hide();
+				$("#delete").hide();
+			}
+			//datagrid初始化
+			$('#dataList').datagrid({
+				title: '空闲时间段列表',
+				iconCls: 'icon-more',//图标
+				border: true,
+				collapsible: false,//是否可折叠的
+				fit: true,//自动大小
+				method: "post",
+				url: "getAvailabilityList",
+				idField: 'teacherId',
+				singleSelect: false,//是否单选
+				pagination: true,//分页控件
+				rownumbers: true,//行号
+				sortName: 'teacherId',
+				sortOrder: 'DESC',
+				remoteSort: false,
+				columns: [
+					[
+						{ field: 'chk', checkbox: true, width: 50 },
+						{ field: 'id', title: 'ID', width: 150, sortable: true},
+						{ field: 'teacherId', title: '教师编号', width: 150, sortable: true },
+						{ field: 'teacherName', title: '姓名', width: 150, sortable: true },
+						{ field: 'teacherSex', title: '性别', width: 150, sortable: true },
+						{ field: 'teacherPhone', title: '联系方式', width: 150, sortable: true },
+						{
+							field: 'startTime',
+							title: '开始时间',
+							width: 150,
+							formatter: function(value, row, index) {
+								return formatDateTime(value);
+							}
+						},
+						{
+							field: 'endTime',
+							title: '结束时间',
+							width: 150,
+							formatter: function(value, row, index) {
+								return formatDateTime(value);
+							}
+						}
+					]
+				],
+				toolbar: "#toolbar",
+				onBeforeLoad: function () {
+					try {
+						$("#teacherList").combobox({
+							width: "150",
+							height: "25",
+							valueField: "id",
+							textField: "username",
+							multiple: false,
+							editable: false,
+							method: "post",
+							url: "/teacher/getTeacherList?from=combox",
+							onChange: function (newValue, oldValue) {
+							}
+						});
+					} catch (err) {
+						preLoadClazz();
+					}
+				}
+			});
+
+
+			// 设置分页控件
+			var p = $('#dataList').datagrid('getPager');
+			$(p).pagination({
+				pageSize: 10,
+				pageList: [10, 20, 30, 50, 100],
+				beforePageText: '第',
+				afterPageText: '页    共 {pages} 页',
+				displayMsg: '当前显示 {from} - {to} 条记录   共 {total} 条记录',
+
+			});
+
+			// 设置工具类按钮
+			$("#add").click(function () {
+				$("#addDialog").dialog("open");
+			});
+			$("#search").click(function() {
+				// 设置搜索按钮点击事件
+				$("#search").click(function() {
+					var teacherId = $("#search_teacher_id").val();
+					$('#dataList').datagrid('load', {
+						teacherId: teacherId
+					});
+				});
+			});
+			// 修改按钮
+			$("#edit").click(function () {
+				var selectRows = $("#dataList").datagrid("getSelections");
+				if (selectRows.length !== 1) {
+					$.messager.alert("消息提醒", "请选择一条数据进行操作!", "warning");
+				} else {
+					$("#editDialog").dialog("open");
+					var selectRow = selectRows[0];
+					$("#edit_id_hidden").val(selectRow.teacherId); // 将隐藏字段的值设置为选中的 teacherId
+					$("#edit_id").textbox('setValue', selectRow.teacherId);
+					$("#edit_start_time").textbox('setValue', selectRow.startTime);
+					$("#edit_end_time").textbox('setValue', selectRow.endTime);
+					console.log(selectRow);
+				}
+			});
+
+			$("#delete").click(function () {
+				var selectRows = $("#dataList").datagrid("getSelections");
+				console.log(selectRows[0]);
+				var selectLength = selectRows.length;
+				console.log(selectLength);
+				//
+				// 	var validate = $("#editForm").form("validate");
+				// 	if (!validate) {
+				// 		$.messager.alert("消息提醒", "请检查你输入的数据!", "warning");
+				// 	} else {
+				// 		var formData = $("#editForm").serialize();
+				// 		console.log(formData);
+				if (selectLength === 0) {
+					$.messager.alert("消息提醒", "请选择数据进行删除!", "warning");
+				} else {
+					var selectRow = selectRows[0];
+					$("#delete_id_hidden").val(selectRow.teacherId); // 将隐藏字段的值设置为选中的 teacherId
+					console.log(selectRow);
+					// var selectRow = selectRows[0];
+					// $("#edit_id_hidden").val(selectRow.teacherId);
+					// var ids = selectRows.map(function (row) { return selectRow.teacherId; });
+
+					var jsonObj = {};
+					$.each(selectRows,function(i,n){
+						jsonObj["ids["+i+"]"] = n.id;
+					});
+					//打印json对象
+					console.log(jsonObj);
+					// console.log("Selected IDs: ", ids);
+					$.messager.confirm("消息提醒", "将删除选中的空闲时间段，确认继续？", function (r) {
+						if (r) {
+							$.ajax({
+								type: "post",
+								url: "deleteAvailability",
+								data: jsonObj,
+								success: function (data) {
+									if (data.success) {
+										$.messager.alert("消息提醒", data.message, "info");
+										// 刷新表格
+										$("#dataList").datagrid("reload");
+										$("#dataList").datagrid("uncheckAll");
+									} else {
+										$.messager.alert("消息提醒", data.message, "warning");
+									}
+								}
+							});
+						}
+					});
+				}
+			});
+			function preLoadClazz() {
+				$("#clazzList").combobox({
+					width: "150",
+					height: "25",
+					valueField: "id",
+					textField: "name",
+					multiple: false,
+					editable: false,
+					method: "post",
+					url: "/clazz/getClazzList?from=combox",
+					onChange: function (newValue, oldValue) {
+					}
+				});
+			}
+
+			//下拉框通用属性
+			$("#add_id, #edit_id").combobox({
+				width: "200",
+				height: "30",
+				valueField: "id",
+				textField: "id",
+				multiple: false,
+				editable: false,
+				method: "post",
+			});
+
+			$("#add_id, #edit_id").combobox({
+				url: "/teacher/getTeacherList?from=combox",
+				onLoadSuccess: function () {
+					//默认选择第一条数据
+					var data = $(this).combobox("getData");
+					console.log(data);
+					$(this).combobox("setValue", data[0].id);
+				}
+			});
+
+			// $("#edit_clazzList").combobox({
+			// 	url: "/clazz/getClazzList?from=combox",
+			// 	onLoadSuccess: function () {
+			// 		// 默认选择第一条数据
+			// 		var data = $(this).combobox("getData");
+			// 		$(this).combobox("setValue", data[0].id);
+			// 	}
+			// });
+
+			// 设置添加学生窗口
+			$("#addDialog").dialog({
+				title: "添加空闲时间段",
+				width: 650,
+				height: 460,
+				iconCls: "icon-add",
+				modal: true,
+				collapsible: false,
+				minimizable: false,
+				maximizable: false,
+				draggable: true,
+				closed: true,
+				buttons: [
+					{
+						text: '添加',
+						plain: true,
+						iconCls: 'icon-user_add',
+						handler: function () {
+							var validate = $("#addForm").form("validate");
+							if (!validate) {
+								$.messager.alert("消息提醒", "请检查你输入的数据!", "warning");
+							} else {
+								var formData = $("#addForm").serialize();
+								console.log(formData);
+								$.ajax({
+									type: "post",
+									url: "addAvailability",
+									data: formData,
+									async: false,
+									cache: false,
+									contentType: "application/x-www-form-urlencoded",
+									processData: false,
+									success: function (data) {
+										if (data.success) {
+											$.messager.alert("消息提醒", data.message, "info");
+											// 关闭窗口
+											$("#addDialog").dialog("close");
+
+											// 清空原表格数据
+											$("#add_id").textbox('setValue', "");
+											$("#add_start_time").textbox('setValue', "");
+											$("#add_end_time").textbox('setValue', "");
+
+											//重新刷新页面数据
+											// 刷新表格
+											$("#dataList").datagrid("reload");
+											$("#dataList").datagrid("uncheckAll");
+											setTimeout(function () {
+												$("#clazzList").combobox('setValue', clazzid);
+											}, 100);
+
+										} else {
+											$.messager.alert("消息提醒", data.message, "warning");
+										}
+									}
+								});
+							}
+						}
+					},
+					{
+						text: '重置',
+						plain: true,
+						iconCls: 'icon-reload',
+						handler: function () {
+							$("#add_number").textbox('setValue', "");
+							$("#add_name").textbox('setValue', "");
+							$("#add_phone").textbox('setValue', "");
+
+							// 重新加载专业
+							$("#add_gradeList").combobox("clear");
+							$("#add_gradeList").combobox("reload");
+						}
+					},
+				]
+			});
+
+			//设置编辑学生窗口
+			$("#editDialog").dialog({
+				title: "修改空闲时间段信息",
+				width: 650,
+				height: 460,
+				iconCls: "icon-edit",
+				modal: true,
+				collapsible: false,
+				minimizable: false,
+				maximizable: false,
+				draggable: true,
+				closed: true,
+				buttons: [
+					{
+						text: '提交',
+						plain: true,
+						iconCls: 'icon-user_add',
+						handler: function () {
+							var validate = $("#editForm").form("validate");
+							if (!validate) {
+								$.messager.alert("消息提醒", "请检查你输入的数据!", "warning");
+							} else {
+								var formData = $("#editForm").serialize();
+								console.log(formData);
+								$.ajax({
+									type: "put",
+									url: "editAvailability",
+									data: formData,
+									async: false,
+									cache: false,
+									contentType: "application/x-www-form-urlencoded",
+									processData: true,
+									success: function (data) {
+										if (data.success) {
+											$.messager.alert("消息提醒", data.message, "info");
+											// 关闭窗口
+											$("#editDialog").dialog("close");
+
+											// 刷新表格
+											$('#dataList').datagrid("reload");
+											$('#dataList').datagrid("uncheckAll");
+										} else {
+											$.messager.alert("消息提醒", data.message, "warning");
+										}
+									}
+								});
+							}
+						}
+					},
+					{
+						text: '重置',
+						plain: true,
+						iconCls: 'icon-reload',
+						handler: function () {
+							$("#edit_id").textbox('setValue', "");
+							$("#edit_start_time").textbox('setValue', "");
+							$("#edit_end_time").textbox('setValue', "");
+						}
+					}
+				],
+				onBeforeOpen: function () {
+					var selectRow = $("#dataList").datagrid("getSelected");
+					$("#edit_id_hidden").val(selectRow.teacherId); // 设置隐藏字段的值
+					$("#edit_id").textbox('setValue', selectRow.teacherId);
+					$("#edit_start_time").textbox('setValue', selectRow.startTime);
+					$("#edit_end_time").textbox('setValue', selectRow.endTime);
+				}
+			});
+		});
+	</script>
+</head>
+
+<body>
+<!-- 学生列表 -->
+<table id="dataList" cellspacing="0" cellpadding="0">
+
+</table>
+<!-- 工具栏 -->
+<div id="toolbar">
+	<div th:if="${session.usertype == '1' || session.usertype == '3'}" style="float: left;">
+		<a id="add" href="javascript:;" class="easyui-linkbutton"
+		   data-options="iconCls:'icon-add',plain:true">添加</a>
+	</div>
+	<div th:if="${session.usertype == '1' || session.usertype == '3'}" style="float: left;"
+		 class="datagrid-btn-separator"></div>
+	<div style="float: left;">
+		<div th:if="${session.usertype == '1' || session.usertype == '3'}" style="float: left;">
+		<a id="edit" href="javascript:;" class="easyui-linkbutton"
+		   data-options="iconCls:'icon-edit',plain:true">修改</a>
+	</div>
+	<div style="float: left;" class="datagrid-btn-separator"></div>
+	<div th:if="${session.usertype == '1' || session.usertype == '3'}" style="float: left;">
+		<a id="delete" href="javascript:;" class="easyui-linkbutton"
+		   data-options="iconCls:'icon-some-delete',plain:true">删除</a>
+</div>
+
+<!-- 添加学生窗口 -->
+<div id="addDialog" style="padding: 10px">
+	<form id="addForm" method="post" enctype="multipart/form-data">
+		<table cellpadding="8">
+			<tr>
+				<td>教师编号</td>
+				<td><input id="add_id" style="width: 200px; height: 30px;" class="easyui-textbox" type="text" name="teacherId" data-options="required:true, missingMessage:'请填写教师编号'" /></td>
+			</tr>
+			<tr>
+				<td>开始时间</td>
+				<td><input id="add_start_time" name="startTime" class="easyui-datetimebox" data-options="required:true, missingMessage:'请填写开始时间', formatter: function(date) { var y = date.getFullYear(); var m = date.getMonth()+1; var d = date.getDate(); var h = date.getHours(); var min = date.getMinutes(); var sec = date.getSeconds(); return y+'-'+(m<10?'0'+m:m)+'-'+(d<10?'0'+d:d)+' '+(h<10?'0'+h:h)+':'+(min<10?'0'+min:min)+':'+(sec<10?'0'+sec:sec); }"></td>
+			</tr>
+			<tr>
+				<td>结束时间</td>
+				<td><input id="add_end_time" name="endTime" class="easyui-datetimebox" data-options="required:true, missingMessage:'请填写结束时间', formatter: function(date) { var y = date.getFullYear(); var m = date.getMonth()+1; var d = date.getDate(); var h = date.getHours(); var min = date.getMinutes(); var sec = date.getSeconds(); return y+'-'+(m<10?'0'+m:m)+'-'+(d<10?'0'+d:d)+' '+(h<10?'0'+h:h)+':'+(min<10?'0'+min:min)+':'+(sec<10?'0'+sec:sec); }"></td>
+			</tr>
+		</table>
+	</form>
+</div>
+
+<!-- 修改空闲时间段窗口 -->
+<div id="editDialog" style="padding: 10px">
+	<form id="editForm" method="post" enctype="multipart/form-data">
+		<input type="hidden" id="edit_id_hidden" name="id" /> <!-- 添加隐藏字段 -->
+		<table cellpadding="8">
+			<tr>
+				<td>教师编号</td>
+				<td><input id="edit_id" style="width: 200px; height: 30px;" class="easyui-textbox" type="text" name="teacherId" data-options="required:true, missingMessage:'请填写教师编号'" /></td>
+			</tr>
+			<tr>
+				<td>开始时间</td>
+				<td><input id="edit_start_time" name="startTime" class="easyui-datetimebox" data-options="required:true, missingMessage:'请填写开始时间', formatter: function(date) { var y = date.getFullYear(); var m = date.getMonth()+1; var d = date.getDate(); var h = date.getHours(); var min = date.getMinutes(); var sec = date.getSeconds(); return y+'-'+(m<10?'0'+m:m)+'-'+(d<10?'0'+d:d)+' '+(h<10?'0'+h:h)+':'+(min<10?'0'+min:min)+':'+(sec<10?'0'+sec:sec); }"></td>
+			</tr>
+			<tr>
+				<td>结束时间</td>
+				<td><input id="edit_end_time" name="endTime" class="easyui-datetimebox" data-options="required:true, missingMessage:'请填写结束时间', formatter: function(date) { var y = date.getFullYear(); var m = date.getMonth()+1; var d = date.getDate(); var h = date.getHours(); var min = date.getMinutes(); var sec = date.getSeconds(); return y+'-'+(m<10?'0'+m:m)+'-'+(d<10?'0'+d:d)+' '+(h<10?'0'+h:h)+':'+(min<10?'0'+min:min)+':'+(sec<10?'0'+sec:sec); }"></td>
+			</tr>
+		</table>
+	</form>
+</div>
+</body>
+
+</html>

@@ -1,0 +1,9 @@
+*.iml
+*.mdj
+.idea/
+target/
+Labs/lab1/graph/
+img/
+Sprint*/
+Labs/lab3/code/graph.png
+Labs/lab4/img/

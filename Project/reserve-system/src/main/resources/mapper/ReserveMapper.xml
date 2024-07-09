@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.reserve.mapper.ReserveMapper">
+
+    <resultMap type="com.example.reserve.entity.Reserve" id="ReserveInfo">
+        <result column="id" property="id"/>
+        <result column="student_id" property="studentId"/>
+        <result column="availability_id" property="availabilityId"/>
+        <result column="status" property="status"/>
+        <result column="reservation_time" property="reservationTime"/>
+    </resultMap>
+
+    <select id="queryList" resultMap="ReserveInfo">
+        select *
+        from reserve
+        <where>
+            <if test="studentid != null">
+                and student_id = #{studentid}
+            </if>
+            <if test="availabilityids != null and availabilityids.size() > 0">
+                and availability_id in
+                <foreach item="id" collection="availabilityids" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
+            </if>
+        </where>
+        limit #{startIndex}, #{pagesize}
+    </select>
+
+
+    <select id="queryCount" resultType="int">
+        select count(*) from reserve
+        <where>
+            <if test="studentid!=null">and student_id = #{studentid}</if>
+            <if test="availabilityids != null and availabilityids.size() > 0">
+                and availability_id in
+                <foreach item="id" collection="availabilityids" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
+            </if>
+        </where>
+    </select>
+
+    <select id="getReservesByStudentId" parameterType="int" resultMap="ReserveInfo">
+        select *
+        from reserve
+        where student_id = #{id}
+    </select>
+
+    <select id="getReservesByAvailabilityId" parameterType="int" resultMap="ReserveInfo">
+        select *
+        from reserve
+        where availability_id = #{id}
+    </select>
+
+    <update id="checkReserve" parameterType="com.example.reserve.entity.Reserve">
+        update reserve
+        set status = #{status}
+        where id = #{id}
+    </update>
+</mapper>

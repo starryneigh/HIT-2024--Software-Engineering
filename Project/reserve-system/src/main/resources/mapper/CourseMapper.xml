@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.reserve.mapper.CourseMapper">
+
+    <resultMap type="com.example.reserve.entity.Course" id="CourseInfo">
+        <result column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="teacher_id" property="teacherId"/>
+        <result column="course_date" property="courseDate"/>
+        <result column="selected_num" property="selectedNum"/>
+        <result column="max_num" property="maxNum"/>
+        <result column="info" property="info"/>
+    </resultMap>
+
+    <select id="queryList" resultMap="CourseInfo">
+        SELECT *
+        from course
+        <where>
+            <if test="name!=null">and name LIKE concat("%",#{name},"%")</if>
+            <if test="teacherId!=null">and teacher_id LIKE concat("%",#{teacherId},"%")</if>
+        </where>
+        limit #{startIndex},#{pagesize}
+    </select>
+
+    <select id="queryCount" resultType="int">
+        select count(*) from course
+        <where>
+            <if test="name!=null">and name LIKE concat("%",#{name},"%")</if>
+            <if test="teacherId!=null">and teacher_id LIKE concat("%",#{teacherId},"%")</if>
+        </where>
+    </select>
+    <select id="getCourseById" parameterType="java.util.List" resultType="com.example.reserve.entity.Course">
+        select *
+        from course
+        <where>
+            id in
+            <foreach collection="list" open="(" close=")" separator="," item="id">
+                #{id}
+            </foreach>
+        </where>
+    </select>
+
+    <select id="getCoursesByTeacherId" parameterType="int" resultMap="CourseInfo">
+        select *
+        from course
+        where teacher_id = #{teacherId}
+    </select>
+
+
+</mapper>

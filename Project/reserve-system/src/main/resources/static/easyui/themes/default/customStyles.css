@@ -1,0 +1,43 @@
+/* customStyles.css */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f8f8f8;
+    margin: 0;
+    padding: 0;
+}
+
+#toolbar {
+    margin-bottom: 10px;
+}
+
+.easyui-dialog {
+    padding: 20px;
+}
+
+.easyui-textbox,
+.easyui-combobox {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table td {
+    padding: 8px;
+    vertical-align: middle;
+}
+
+.easyui-linkbutton {
+    margin: 0 5px;
+}
+
+#dataList {
+    margin-top: 10px;
+}
+
+tr:nth-child(odd) {
+    background-color: #f2f2f2;
+}

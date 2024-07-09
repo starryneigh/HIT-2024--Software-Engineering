@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>预约列表</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/easyui/themes/default/easyui.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/easyui/themes/icon.css}">
+    <link rel="stylesheet" type="text/css" th:href="@{/easyui/css/demo.css}">
+    <script type="text/javascript" th:src="@{/easyui/jquery.min.js}"></script>
+    <script type="text/javascript" th:src="@{/easyui/jquery.easyui.min.js}"></script>
+    <script type="text/javascript" th:src="@{/easyui/js/validateExtends.js}"></script>
+    <script type="text/javascript" th:inline="javascript">
+
+        function formatDateTime(dateTimeStr) {
+            var date = new Date(dateTimeStr);
+            var year = date.getFullYear();
+            var month = ('0' + (date.getMonth() + 1)).slice(-2); // Months are zero-based
+            var day = ('0' + date.getDate()).slice(-2);
+            var hours = ('0' + date.getHours()).slice(-2);
+            var minutes = ('0' + date.getMinutes()).slice(-2);
+            var seconds = ('0' + date.getSeconds()).slice(-2);
+            return year + '-' + month + '-' + day + ' ' + hours + ':' + minutes + ':' + seconds;
+        }
+        /*<![CDATA[*/
+        $(function () {
+            //datagrid初始化
+            $('#dataList').datagrid({
+                title: '预约列表',
+                iconCls: 'icon-more',//图标
+                border: true,
+                collapsible: false,//是否可折叠的
+                fit: true,//自动大小
+                method: "post",
+                url: "getReserveList",
+                idField: 'id',
+                singleSelect: true,//是否单选
+                pagination: true,//分页控件
+                rownumbers: true,//行号
+                sortName: 'id',
+                sortOrder: 'DESC',
+                remoteSort: false,
+                columns: [[
+                    { field: 'chk', checkbox: true, width: 50 },
+                    { field: 'id', title: 'ID', width: 50, sortable: true },
+                    { field: 'studentId', title: '学生编号', width: 100},
+                    {field:'studentName',title:'学生姓名',width:100},
+                    { field: 'teacherId', title: '教师编号', width: 100},
+                    {field:'teacherName', title: '教师姓名', width: 100},
+                    // {field:'teacherId',title:'授课老师',width:200,
+                    // },
+                    {
+                        field: 'status', title: '状态', width: 80,
+                        formatter: function (value, row, index) {
+                            switch (row.status) {
+                                case "PENDING": {
+                                    return '等待审核';
+                                }
+                                case "ACCEPTED": {
+                                    return '预约成功';
+                                }
+                                case "REJECTED": {
+                                    return '预约不成功';
+                                }
+                            }
+                        }
+                    },
+                    {
+                        field: 'startTime',
+                        title: '开始时间',
+                        width: 150,
+                        formatter: function(value, row, index) {
+                            return formatDateTime(value);
+                        }
+                    },
+                    {
+                        field: 'endTime',
+                        title: '结束时间',
+                        width: 150,
+                        formatter: function(value, row, index) {
+                            return formatDateTime(value);
+                        }
+                    }
+                ]],
+                toolbar: "#toolbar",
+                onBeforeLoad: function () {
+                    try {
+                        $("#studentList").combobox("getData")
+                        // $("#teacherList").combobox("getData")
+                    } catch (err) {
+                        preLoadStudent();
+                        // preLoadClazz();
+                    }
+                }
+            });
+            //提前加载学生信息
+            function preLoadStudent() {
+                $("#studentList").combobox({
+                    width: "150",
+                    height: "25",
+                    valueField: "id",
+                    textField: "username",
+                    multiple: false, //可多选
+                    editable: false, //不可编辑
+                    method: "post",
+                    url: "getStudentList",
+                    onChange: function (newValue, oldValue) {
+                    //加载班级下的学生
+                    //$('#dataList').datagrid("options").queryParams = {clazzid: newValue};
+                    //$('#dataList').datagrid("reload");
+                }
+            });
+            }
+            //提前加载教师信息
+            function preLoadClazz(){
+                $("#teacherList").combobox({
+                    width: "150",
+                    height: "25",
+                    valueField: "id",
+                    textField: "username",
+                    multiple: false,
+                    editable: false,
+                    method: "post",
+                    url: "/teacher/getTeacherList?from=combox",
+                    onChange: function(newValue, oldValue){
+                    }
+
+                });
+            }
+
+            //设置分页控件
+            var p = $('#dataList').datagrid('getPager');
+            $(p).pagination({
+                pageSize: 10,//每页显示的记录条数，默认为10
+                pageList: [10, 20, 30, 50, 100],//可以设置每页记录条数的列表
+                beforePageText: '第',//页数文本框前显示的汉字
+                afterPageText: '页    共 {pages} 页',
+                displayMsg: '当前显示 {from} - {to} 条记录   共 {total} 条记录',
+            });
+
+            //设置工具类按钮
+            $("#add").click(function () {
+                $("#addDialog").dialog("open");
+            });
+
+            //设置编辑按钮
+            $("#edit").click(function () {
+                var selectRows = $("#dataList").datagrid("getSelections");
+                console.log(selectRows[0])
+                if (selectRows.length != 1) {
+                    $.messager.alert("消息提醒", "请选择一条数据进行操作!", "warning");
+                } else {
+                    if (selectRows[0].status != "PENDING") {
+                        $.messager.alert("消息提醒", "该预约信息已被审核，不允许修改!", "warning");
+                        return;
+                    }
+                    $("#editDialog").dialog("open");
+                }
+            });
+
+            //设置审核按钮
+            $("#check").click(function () {
+                var selectRows = $("#dataList").datagrid("getSelections");
+                if (selectRows.length != 1) {
+                    $.messager.alert("消息提醒", "请选择一条数据进行操作!", "warning");
+                } else {
+                    if (selectRows[0].status != "PENDING") {
+                        $.messager.alert("消息提醒", "该预约信息已被审核，请勿重复审核!", "warning");
+                        return;
+                    }
+                    $("#checkDialog").dialog("open");
+                }
+            });
+
+//编辑预约信息
+            $("#editDialog").dialog({
+                title: "修改预约信息",
+                width: 450,
+                height: 350,
+                iconCls: "icon-edit",
+                modal: true,
+                collapsible: false,
+                minimizable: false,
+                maximizable: false,
+                draggable: true,
+                closed: true,
+                buttons: [
+                    {
+                        text: '提交',
+                        plain: true,
+                        iconCls: 'icon-add',
+                        handler: function () {
+                            var validate = $("#editForm").form("validate");
+                            if (!validate) {
+                                $.messager.alert("消息提醒", "请检查你输入的数据!", "warning");
+                                return;
+                            } else {
+                                var studentId = $("#edit_studentList").combobox("getValue");
+                                var availabilityId = $("#edit_availabilityId").val();
+                                var id = $("#dataList").datagrid("getSelected").id;
+                                var info = $("#edit_info").textbox("getValue");
+                                var data = { id: id, studentId: studentId, availabilityId: availabilityId, info: info };
+
+                                $.ajax({
+                                    type: "put",
+                                    url: "editReserve",
+                                    data: data,
+                                    success: function (data) {
+                                        if (data.success) {
+                                            $.messager.alert("消息提醒", data.message, "info");
+                                            //关闭窗口
+                                            $("#editDialog").dialog("close");
+                                            //清空原表格数据
+                                            $("#edit_info").textbox('setValue', "");
+
+                                            //重新刷新页面数据
+                                            $('#dataList').datagrid("reload");
+                                            $('#dataList').datagrid("uncheckAll");
+
+                                        } else {
+                                            $.messager.alert("消息提醒", data.message, "warning");
+                                            return;
+                                        }
+                                    }
+                                });
+                            }
+                        }
+                    },
+                    {
+                        text: '重置',
+                        plain: true,
+                        iconCls: 'icon-reload',
+                        handler: function() {
+                            $("#edit_info").val("");
+                        }
+                    },
+                ],
+                onBeforeOpen: function() {
+                    var selectRow = $("#dataList").datagrid("getSelected");
+                    //设置值
+                    $("#edit_info").textbox('setValue', selectRow.info);
+                    // 保留学生ID
+                    var studentId = selectRow.studentId;
+                    setTimeout(function () {
+                        $("#edit_studentList").combobox('setValue', studentId);
+                    }, 100);
+                },
+                onClose: function() {
+                    $("#edit_info").val("");
+                }
+            });
+            //审核预约信息
+            $("#checkDialog").dialog({
+                title: "审核预约信息",
+                width: 450,
+                height: 350,
+                iconCls: "icon-edit",
+                modal: true,
+                collapsible: false,
+                minimizable: false,
+                maximizable: false,
+                draggable: true,
+                closed: true,
+                buttons: [
+                    {
+                        text: '提交',
+                        plain: true,
+                        iconCls: 'icon-add',
+                        handler: function () {
+                            var validate = $("#checkForm").form("validate");
+                            if (!validate) {
+                                $.messager.alert("消息提醒", "请检查你输入的数据!", "warning");
+                                return;
+                            } else {
+
+                                var studentid = $("#dataList").datagrid("getSelected").studentId;
+                                var id = $("#dataList").datagrid("getSelected").id;
+                                var info = $("#dataList").datagrid("getSelected").info;
+                                // var remark = $("#check_remark").textbox("getValue");
+                                var status = $("#check_statusList").combobox("getValue");
+                                var data = { id: id, studentId: studentid, info: info, status: status };
+
+                                $.ajax({
+                                    type: "post",
+                                    url: "checkReserve",
+                                    data: data,
+                                    success: function (data) {
+                                    if (data.success) {
+                                        $.messager.alert("消息提醒", data.message, "info");
+                                        //关闭窗口
+                                        $("#checkDialog").dialog("close");
+                                        //清空原表格数据
+                                        // $("#check_remark").textbox('setValue', "");
+
+                                        //重新刷新页面数据
+                                        $('#dataList').datagrid("reload");
+                                        $('#dataList').datagrid("uncheckAll");
+
+                                    } else {
+                                        $.messager.alert("消息提醒", data.message, "warning");
+                                        return;
+                                    }
+                                }
+                            });
+                            }
+                        }
+                    },
+                    {
+                        text: '重置',
+                        plain: true,
+                        iconCls: 'icon-reload',
+                        handler: function() {
+                            // $("#check_remark").val("");
+                            $("#check_statusList").combox('clear');
+                        }
+                    },
+                ],
+                onBeforeOpen: function() {
+                    /*
+                    var selectRow = $("#dataList").datagrid("getSelected");
+                    //设置值
+                    $("#edit_info").textbox('setValue',selectRow.info);
+                    //$("#edit-id").val(selectRow.id);
+                    var studentId = selectRow.studentId;
+                    setTimeout(function(){
+                        $("#edit_studentList").combobox('setValue', studentId);
+                    }, 100);*/
+                },
+                onClose: function() {
+                    $("#edit_info").val("");
+                    //$("#edit-id").val('');
+                }
+            });
+
+            //删除
+            $("#delete").click(function () {
+                var selectRows = $("#dataList").datagrid("getSelections");
+                console.log(selectRows[0]);
+                var selectLength = selectRows.length;
+                console.log(selectLength);
+                //
+                // 	var validate = $("#editForm").form("validate");
+                // 	if (!validate) {
+                // 		$.messager.alert("消息提醒", "请检查你输入的数据!", "warning");
+                // 	} else {
+                // 		var formData = $("#editForm").serialize();
+                // 		console.log(formData);
+                if (selectLength === 0) {
+                    $.messager.alert("消息提醒", "请选择数据进行删除!", "warning");
+                } else {
+                    var selectRow = selectRows[0];
+                    $("#delete_id_hidden").val(selectRow.teacherId); // 将隐藏字段的值设置为选中的 teacherId
+                    console.log(selectRow);
+                    // var selectRow = selectRows[0];
+                    // $("#edit_id_hidden").val(selectRow.teacherId);
+                    // var ids = selectRows.map(function (row) { return selectRow.teacherId; });
+
+                    var jsonObj = {};
+                    $.each(selectRows,function(i,n){
+                        jsonObj["ids["+i+"]"] = n.id;
+                    });
+                    //打印json对象
+                    console.log(jsonObj);
+                    // console.log("Selected IDs: ", ids);
+                    $.messager.confirm("消息提醒", "将删除选中的预约信息，确认继续？", function (r) {
+                        if (r) {
+                            $.ajax({
+                                type: "post",
+                                url: "deleteReserve",
+                                data: jsonObj,
+                                success: function (data) {
+                                    if (data.success) {
+                                        $.messager.alert("消息提醒", data.message, "info");
+                                        // 刷新表格
+                                        $("#dataList").datagrid("reload");
+                                        $("#dataList").datagrid("uncheckAll");
+                                    } else {
+                                        $.messager.alert("消息提醒", data.message, "warning");
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+
+            //设置添加窗口
+            $(function () {
+                // 格式化日期为 'yyyy-MM-dd HH:mm:ss'
+                function formatDateToYMDHMS(date) {
+                    const pad = (num) => (num < 10 ? '0' + num : num);
+                    return date.getFullYear() + '-' +
+                        pad(date.getMonth() + 1) + '-' +
+                        pad(date.getDate()) + ' ' +
+                        pad(date.getHours()) + ':' +
+                        pad(date.getMinutes()) + ':' +
+                        pad(date.getSeconds());
+                }
+
+// 获取当前日期并格式化
+                var currentDate = new Date();
+                var formattedDate = formatDateToYMDHMS(currentDate);
+                // 设置添加窗口
+                $("#addDialog").dialog({
+                    title: "添加学生",
+                    width: 650,
+                    height: 460,
+                    iconCls: "icon-add",
+                    modal: true,
+                    collapsible: false,
+                    minimizable: false,
+                    maximizable: false,
+                    draggable: true,
+                    closed: true,
+                    buttons: [
+                        {
+                            text: '添加',
+                            plain: true,
+                            iconCls: 'icon-user_add',
+                            handler: function () {
+                                var validate = $("#addForm").form("validate");
+                                if (!validate) {
+                                    $.messager.alert("消息提醒", "请检查你输入的数据!", "warning");
+                                } else {
+                                    var formData = $("#addForm").serialize();
+                                    formData += "&reservationTime=" + encodeURIComponent(formattedDate);
+                                    console.log(formData);
+                                    $.ajax({
+                                        type: "post",
+                                        url: "addReserve",
+                                        data: formData,
+                                        async: false,
+                                        cache: false,
+                                        contentType: "application/x-www-form-urlencoded",
+                                        processData: false,
+                                        success: function (data) {
+                                            if (data.success) {
+                                                $.messager.alert("消息提醒", data.message, "info");
+                                                // 关闭窗口
+                                                $("#addDialog").dialog("close");
+
+                                                // 清空原表格数据
+                                                $("#add_studentId").textbox('setValue', "");
+                                                $("#add_availabilityId").textbox('setValue', "");
+
+                                                //重新刷新页面数据
+                                                // 刷新表格
+                                                $("#dataList").datagrid("reload");
+                                                $("#dataList").datagrid("uncheckAll");
+                                                setTimeout(function () {
+                                                    $("#clazzList").combobox('setValue', clazzid);
+                                                }, 100);
+
+                                            } else {
+                                                $.messager.alert("消息提醒", data.message, "warning");
+                                            }
+                                        }
+                                    });
+                                }
+                            }
+                        },
+                        {
+                            text: '重置',
+                            plain: true,
+                            iconCls: 'icon-book-reset',
+                            handler: function() {
+                                $("#add_availabilityId").textbox('setValue', "");
+                            }
+                        },
+                    ],
+                    // onBeforeOpen: function() {
+                    //     var selectRow = $("#dataList").datagrid("getSelected");
+                    //     //设置值
+                    //     $("#add_info").textbox('setValue', selectRow.info);
+                    //     // 保留学生ID
+                    //     var studentId = selectRow.studentId;
+                    //     setTimeout(function () {
+                    //         $("#add_studentList").combobox('setValue', studentId);
+                    //     }, 100);
+                    // },
+                    // onClose: function() {
+                    //     $("#add_info").val("");
+                    // }
+                });
+
+                // 提前加载学生信息
+                // function preLoadStudent() {
+                //     $("#studentList").combobox({
+                //         width: "150",
+                //         height: "25",
+                //         valueField: "id",
+                //         textField: "username",
+                //         multiple: false, // 可多选
+                //         editable: false, // 不可编辑
+                //         method: "post",
+                //         url: "/student/getStudentList?from=combox",
+                //         onChange: function (newValue, oldValue) {
+                //             // 加载班级下的学生
+                //             // $('#dataList').datagrid("options").queryParams = {clazzid: newValue};
+                //             // $('#dataList').datagrid("reload");
+                //         }
+                //     });
+                // }
+            });
+
+            //下拉框通用属性
+            $("#add_studentId, #edit_studentList").combobox({
+                width: "200",
+                height: "30",
+                valueField: "id",
+                textField: "username",
+                multiple: false, //不可多选
+                editable: false, //不可编辑
+                method: "post",
+            });
+
+            $("#add_availabilityId, #edit_availabilityId").combobox({
+                width: "200",
+                height: "30",
+                valueField: "id",
+                textField: "id",
+                multiple: false, //不可多选
+                editable: false, //不可编辑
+                method: "post",
+            });
+
+            $("#add_studentId").combobox({
+                url: "/student/getStudentList?from=combox",
+                onLoadSuccess: function () {
+                    //默认选择第一条数据
+                    var data = $(this).combobox("getData");
+                    console.log(data);
+                    $(this).combobox("setValue", data[0].id);
+                }
+            });
+
+            $("#edit_studentList").combobox({
+                url: "/student/getStudentList?from=combox",
+                onLoadSuccess: function () {
+                    //默认选择第一条数据
+                    var data = $(this).combobox("getData");
+                    console.log(data);
+                    $(this).combobox("setValue", data[0].id);
+                }
+            });
+
+            $("#add_availabilityId, #edit_availabilityId").combobox({
+                url: "/availability/getAvailabilityList?from=combox",
+                onLoadSuccess: function () {
+                    //默认选择第一条数据
+                    var data = $(this).combobox("getData");
+                    console.log(data);
+                    $(this).combobox("setValue", data[0].id);
+                }
+            });
+
+        //     //添加信息学生选择框
+        //     $("#add_studentList").combobox({
+        //         url: [[@{/ student / getStudentList(from = combox)}]],
+        //     onLoadSuccess: function () {
+        //         //默认选择第一条数据
+        //         var data = $(this).combobox("getData");
+        //         $(this).combobox("setValue", data[0].id);
+        //     }
+        // });
+        //     //编辑信息学生选择框
+        //     $("#edit_studentList").combobox({
+        //         url: [[@{/ student / getStudentList(from = combox)}]],
+        //     onLoadSuccess: function () {
+        //         //默认选择第一条数据
+        //         var data = $(this).combobox("getData");
+        //         $(this).combobox("setValue", data[0].id);
+        //     }
+        // });
+
+            //搜索按钮监听事件
+            $("#search-btn").click(function () {
+                $('#dataList').datagrid('load', {
+                    studentid: $("#studentList").combobox('getValue') == '' ? 0 : $("#studentList").combobox('getValue')
+                });
+            });
+
+            //清空搜索条件
+            $("#clear-btn").click(function () {
+                $('#dataList').datagrid("reload", {});
+                $("#studentList").combobox('clear');
+            });
+        });
+        /*]]>*/
+    </script>
+</head>
+
+<body>
+<!-- 数据列表 -->
+<table id="dataList" cellspacing="0" cellpadding="0">
+
+</table>
+<!-- 工具栏 -->
+<div id="toolbar">
+    <div th:if="${session.usertype == '2'}" style="float: left;"><a id="add" href="javascript:;"
+                                                                    class="easyui-linkbutton" data-options="iconCls:'icon-add',plain:true">添加</a></div>
+    <div style="float: left;" class="datagrid-btn-separator"></div>
+    <div th:if="${session.usertype == '2'}" style="float: left;"><a id="edit" href="javascript:;"
+                                                                    class="easyui-linkbutton" data-options="iconCls:'icon-edit',plain:true">修改</a></div>
+    <div th:if="${session.usertype == '1' || session.usertype == '3'}" style="float: left;"><a id="check"
+                                                                                               href="javascript:;" class="easyui-linkbutton" data-options="iconCls:'icon-edit',plain:true">审核</a></div>
+    <div style="float: left; margin-right: 10px;"><a id="delete" href="javascript:;" class="easyui-linkbutton"
+                                                     data-options="iconCls:'icon-some-delete',plain:true">删除</a></div>
+    <div style="float: left;" class="datagrid-btn-separator"></div>
+
+</div>
+
+<!-- 添加数据窗口 -->
+<div id="addDialog" style="padding: 10px">
+    <form id="addForm" method="post">
+        <table cellpadding="8">
+            <tr>
+                <td style="width:60px">学生:</td>
+                <td colspan="3">
+                    <input id="add_studentId" style="width: 300px; height: 30px;" class="easyui-textbox"
+                           name="studentId" data-options="required:true" />
+                </td>
+            </tr>
+            <tr>
+                <td>空闲时间段ID:</td>
+                <td>
+                    <input id="add_availabilityId" style="width: 300px; height: 30px;" class="easyui-textbox"
+                           name="availabilityId" data-options="required:true, missingMessage:'请输入空闲时间段ID'" />
+                </td>
+            </tr>
+        </table>
+    </form>
+</div>
+
+<!-- 编辑数据窗口 -->
+<div id="editDialog" style="padding: 10px">
+    <form id="editForm" method="post">
+        <table cellpadding="8">
+            <tr>
+                <td style="width:60px">学生:</td>
+                <td colspan="3">
+                    <input id="edit_studentList" style="width: 300px; height: 30px;" class="easyui-textbox"
+                           name="studentId" data-options="required:true, missingMessage:'请选择学生信息'" />
+                </td>
+            </tr>
+            <tr>
+                <td>空闲时间段ID:</td>
+                <td>
+                    <input id="edit_availabilityId" style="width: 300px; height: 30px;" class="easyui-textbox"
+                           name="availabilityId" data-options="required:true, missingMessage:'请输入空闲时间段ID'" />
+                </td>
+            </tr>
+        </table>
+    </form>
+</div>
+<!-- 审核数据窗口 -->
+<div id="checkDialog" style="padding: 10px">
+    <form id="checkForm" method="post">
+        <table cellpadding="8">
+            <tr>
+                <td style="width:60px">学生:</td>
+                <td colspan="3">
+                    <select id="check_statusList" style="width: 300px; height: 30px;" class="easyui-combobox"
+                            name="status" data-options="required:true, missingMessage:'请选择状态'">
+                        <option value="ACCEPTED">审核通过</option>
+                        <option value="REJECTED">审核不通过</option>
+                    </select>
+                </td>
+            </tr>
+<!--            <tr>-->
+<!--                <td>批复内容:</td>-->
+<!--                <td>-->
+<!--                        <textarea id="check_remark" name="remark" style="width: 300px; height: 160px;"-->
+<!--                                  class="easyui-textbox" data-options="multiline:true"></textarea>-->
+<!--                </td>-->
+<!--            </tr>-->
+        </table>
+    </form>
+</div>
+</body>
+
+</html>

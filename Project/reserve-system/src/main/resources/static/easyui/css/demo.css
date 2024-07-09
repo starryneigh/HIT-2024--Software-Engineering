@@ -1,0 +1,30 @@
+* {
+    font-size: 12px;
+}
+
+body {
+    font-family: verdana, helvetica, arial, sans-serif;
+    padding: 20px;
+    font-size: 12px;
+    margin: 0;
+    background-color: #E6F7FF; /* 淡蓝色背景 */
+    color: #333; /* 深色文字以便在淡蓝色背景上更清晰 */
+}
+
+h2 {
+    font-size: 18px;
+    font-weight: bold;
+    margin: 0;
+    margin-bottom: 15px;
+    color: #004080; /* 深蓝色文字 */
+}
+
+.demo-info {
+    padding: 0 0 12px 0;
+    color: #0073E6; /* 蓝色文本 */
+}
+
+.demo-tip {
+    display: none;
+}
+

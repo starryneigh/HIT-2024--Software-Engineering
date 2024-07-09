@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>教师预约系统</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/easyui/css/default.css}" />
+    <link rel="stylesheet" type="text/css" th:href="@{/easyui/themes/default/easyui.css}" />
+    <link rel="stylesheet" type="text/css" th:href="@{/easyui/themes/icon.css}" />
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <script type="text/javascript" th:src="@{/easyui/jquery.min.js}"></script>
+    <script type="text/javascript" th:src="@{/easyui/jquery.easyui.min.js}"></script>
+    <script type="text/javascript" th:src='@{/easyui/js/outlook2.js}'> </script>
+    <style>
+        body {
+            font-family: "Arial", "微软雅黑", sans-serif;
+            background-color: #f0f2f5;
+        }
+
+        .header {
+            background-color: #343a40;
+            color: white;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header .title {
+            font-size: 24px;
+        }
+
+        .header .user-info {
+            display: flex;
+            align-items: center;
+        }
+
+        .header .user-info span {
+            margin-right: 15px;
+        }
+
+        .header .user-info a {
+            color: #f8d7da;
+            text-decoration: none;
+        }
+
+        .header .user-info a:hover {
+            color: #c82333;
+        }
+
+        .nav-menu {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .nav-menu .panel-title {
+            font-size: 16px;
+        }
+
+        .nav-menu .panel-header {
+            background-color: #0069d9;
+        }
+
+        .main-content {
+            background-color: #ffffff;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .easyui-tabs .tabs-header {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .easyui-tabs .tabs-header .tabs-title {
+            color: #f8d7da;
+        }
+
+        .easyui-tabs .tabs-header .tabs-selected .tabs-title {
+            color: #343a40;
+        }
+    </style>
+    <script type="text/javascript" th:inline="javascript">
+        /*<![CDATA[*/
+        var usertype = [[${ session.usertype }]];
+        var commonMenus = [
+            {
+                "menuid": "1", "icon": "fa fa-user", "menuname": "学生管理",
+                "menus": [
+                    { "menuid": "11", "menuname": "学生列表", "icon": "fa fa-list", "url": /*[[@{/student/student_list}]]*/ }
+                ]
+            },
+            {
+                "menuid": "7", "icon": "fa fa-cogs", "menuname": "系统管理",
+                "menus": [
+                    { "menuid": "71", "menuname": "修改密码", "icon": "fa fa-key", "url": /*[[@{/system/personalView}]]*/ }
+                ]
+            },
+            {
+                "menuid": "5", "icon": "fa fa-calendar-alt", "menuname": "预约管理",
+                "menus": [
+                    { "menuid": "51", "menuname": "预约列表", "icon": "fa fa-book", "url": /*[[@{/reserve/reserve_list}]]*/ }
+                ]
+            },
+            {
+                "menuid": "6", "icon": "fa fa-clock", "menuname": "空闲时间段管理",
+                "menus": [
+                    { "menuid": "61", "menuname": "空闲列表", "icon": "fa fa-calendar-check", "url": /*[[@{/availability/availability_list}]]*/ }
+                ]
+            },
+        ];
+        var adminTeacherMenus = [
+            {
+                "menuid": "2", "icon": "fa fa-graduation-cap", "menuname": "专业管理",
+                "menus": [
+                    { "menuid": "22", "menuname": "专业列表", "icon": "fa fa-th-list", "url": /*[[@{/clazz/clazz_list}]]*/ }
+                ]
+            },
+            {
+                "menuid": "3", "icon": "fa fa-chalkboard-teacher", "menuname": "教师管理",
+                "menus": [
+                    { "menuid": "31", "menuname": "教师列表", "icon": "fa fa-user-tie", "url": /*[[@{/teacher/teacher_list}]]*/ }
+                ]
+            },
+            {
+                "menuid": "4", "icon": "fa fa-book", "menuname": "课程管理",
+                "menus": [
+                    { "menuid": "41", "menuname": "课程列表", "icon": "fa fa-book-open", "url": /*[[@{/course/course_list}]]*/ }
+                ]
+            },
+
+        ];
+        var _menus = { "menus": [] };
+        if (usertype === "1" || usertype === "3") {
+            _menus.menus = _menus.menus.concat(commonMenus, adminTeacherMenus);
+        }
+        if (usertype === "2") {
+            _menus.menus = commonMenus;
+        }
+        _menus.menus.sort(function (a, b) {
+            return a.menuid - b.menuid;
+        });
+        /*]]>*/
+    </script>
+</head>
+
+<body class="easyui-layout" style="overflow-y: hidden" scroll="no">
+
+<div region="north" split="true" border="false" class="header">
+    <span class="title">教师预约系统</span>
+    <span class="user-info">
+            <span th:if="${session.usertype == '1'}" th:text="${session.admin.username}"></span>
+            <span th:if="${session.usertype == '2'}" th:text="${session.student.username}"></span>
+            <span th:if="${session.usertype == '3'}" th:text="${session.teacher.username}"></span>
+            <a th:href="@{/system/logout}" id="loginOut">退出</a>
+        </span>
+</div>
+
+<div region="west" hide="true" split="true" title="导航菜单" style="width:200px;" id="west" class="nav-menu">
+    <div id="nav" class="easyui-accordion" fit="true" border="false">
+    </div>
+</div>
+
+<div id="mainPanle" region="center" class="main-content">
+    <div id="tabs" class="easyui-tabs" fit="true" border="false" th:include="system/welcome :: welcome"></div>
+</div>
+</body>
+
+</html>
